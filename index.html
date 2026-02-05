@@ -3,115 +3,181 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rebate — Savings Tracker</title>
+  <title>Tune Pin — Savings & Rewards</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-  <header class="site-header">
+
+  <header class="header">
     <div class="container header-inner">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">$</div>
-        <div>
-          <h1 class="brand-title">Rebate</h1>
-          <p class="brand-subtitle">Track rebates, discounts, and savings in one place.</p>
+        <div class="logo" aria-hidden="true">TP</div>
+        <div class="brand-text">
+          <h1>Tune Pin</h1>
+          <p>Track savings across trusted stores. Earn prizes as you save.</p>
         </div>
       </div>
-
       <div class="creator">
-        <span class="creator-label">Created by</span>
+        <span class="muted">Created by</span>
         <span class="creator-name">Parth Pankaj Bakhda</span>
       </div>
     </div>
   </header>
 
   <main class="container">
-    <section class="summary">
-      <div class="summary-card">
-        <p class="summary-label">Total Savings</p>
-        <h2 class="summary-value" id="totalSavings">$0</h2>
-        <p class="summary-hint" id="summaryHint">Add your first rebate below.</p>
+    <section class="grid-2">
+      <div class="card hero">
+        <h2>Your Savings Dashboard</h2>
+        <p class="muted">
+          Add rebate/discount entries (e.g., “$500 off fridge”) from trusted stores and Tune Pin totals
+          your savings and reward progress automatically.
+        </p>
+
+        <div class="metrics">
+          <div class="metric">
+            <span class="label">Total Savings (Gross)</span>
+            <span class="value" id="grossTotal">$0</span>
+          </div>
+          <div class="metric">
+            <span class="label">Tune Pin Fees</span>
+            <span class="value" id="feeTotal">$0</span>
+          </div>
+          <div class="metric">
+            <span class="label">Net Savings</span>
+            <span class="value accent" id="netTotal">$0</span>
+          </div>
+          <div class="metric">
+            <span class="label">Entries</span>
+            <span class="value" id="entryCount">0</span>
+          </div>
+        </div>
       </div>
 
-      <div class="summary-card subtle">
-        <p class="summary-label">Entries</p>
-        <h2 class="summary-value" id="entryCount">0</h2>
-        <p class="summary-hint">Saved locally in your browser.</p>
+      <div class="card">
+        <div class="card-head">
+          <h3>Rewards Progress</h3>
+          <p class="muted">The more you save, the more prizes you unlock.</p>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-top">
+            <div>
+              <div class="muted small">Current Prize Tier</div>
+              <div class="tier" id="tierName">Starter</div>
+            </div>
+            <div class="right">
+              <div class="muted small">Progress to Next Tier</div>
+              <div class="tier" id="tierProgressText">$0 / $500</div>
+            </div>
+          </div>
+
+          <div class="progress-bar" aria-label="Progress bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+          </div>
+
+          <div class="tiers" id="tiersList">
+            <!-- injected -->
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Business model example:</strong> If a rebate gives $500 off, Tune Pin can charge a small
+          processing fee (e.g., $25) to deliver the rebate instantly.
+        </div>
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <h3>Add a Savings Entry</h3>
-        <p>Example: Store “Costco”, Item “Fridge”, Savings “500”.</p>
+    <section class="card">
+      <div class="card-head row">
+        <div>
+          <h3>Add a Savings Entry</h3>
+          <p class="muted">Example: Costco • Fridge • Savings 500 • Fee 25</p>
+        </div>
+        <button class="btn ghost" id="clearAllBtn" type="button">Clear All</button>
       </div>
 
-      <form id="rebateForm" class="form">
-        <div class="grid">
+      <form id="entryForm" class="form">
+        <div class="form-grid">
           <label class="field">
-            <span class="field-label">Store (optional)</span>
-            <input type="text" id="store" placeholder="Costco" maxlength="40" />
+            <span class="muted small">Store</span>
+            <select id="store" required>
+              <option value="">Choose a trusted store</option>
+              <option>Costco</option>
+              <option>Walmart</option>
+              <option>Target</option>
+              <option>Best Buy</option>
+              <option>Amazon</option>
+              <option>Home Depot</option>
+              <option>Lowe's</option>
+              <option>Sam's Club</option>
+              <option>Kohl's</option>
+              <option>Staples</option>
+              <option>Other Trusted Store</option>
+            </select>
           </label>
 
           <label class="field">
-            <span class="field-label">Item / Description</span>
-            <input type="text" id="item" placeholder="Fridge" maxlength="60" required />
+            <span class="muted small">Item / Description</span>
+            <input id="item" type="text" placeholder="Fridge" maxlength="80" required />
           </label>
 
           <label class="field">
-            <span class="field-label">Savings Amount (USD)</span>
-            <input type="number" id="amount" placeholder="500" min="0" step="0.01" required />
+            <span class="muted small">Savings Amount (USD)</span>
+            <input id="savings" type="number" placeholder="500" min="0" step="0.01" required />
           </label>
 
           <label class="field">
-            <span class="field-label">Date</span>
-            <input type="date" id="date" />
+            <span class="muted small">Tune Pin Fee (USD)</span>
+            <input id="fee" type="number" placeholder="25" min="0" step="0.01" />
+          </label>
+
+          <label class="field">
+            <span class="muted small">Date</span>
+            <input id="date" type="date" />
           </label>
         </div>
 
-        <div class="actions">
-          <button type="submit" class="btn primary">Add Savings</button>
-          <button type="button" class="btn" id="clearAllBtn">Clear All</button>
+        <div class="form-actions">
+          <button class="btn primary" type="submit">Add Entry</button>
+          <input id="search" class="search" type="search" placeholder="Search entries (fridge, Costco...)" />
         </div>
       </form>
     </section>
 
-    <section class="panel">
-      <div class="panel-header row">
-        <div>
-          <h3>Your Savings List</h3>
-          <p>Search, review, and remove entries anytime.</p>
-        </div>
-
-        <div class="search">
-          <input type="search" id="search" placeholder="Search: fridge, Costco, couch..." />
-        </div>
+    <section class="card">
+      <div class="card-head">
+        <h3>Savings History</h3>
+        <p class="muted">All entries are stored locally on your device (browser storage).</p>
       </div>
 
       <div class="table-wrap">
-        <table class="table" aria-label="Savings table">
+        <table class="table">
           <thead>
             <tr>
               <th>Date</th>
               <th>Store</th>
               <th>Description</th>
               <th class="right">Savings</th>
+              <th class="right">Fee</th>
+              <th class="right">Net</th>
               <th class="right">Action</th>
             </tr>
           </thead>
-          <tbody id="rebateTableBody">
-            <!-- Rows injected by JS -->
-          </tbody>
+          <tbody id="tbody"></tbody>
         </table>
       </div>
 
       <div class="empty" id="emptyState">
-        <p><strong>No entries yet.</strong> Add savings above (like “$500 off fridge”) and it will total everything automatically.</p>
+        <strong>No entries yet.</strong>
+        <div class="muted">Add your first rebate savings above and Tune Pin will total it automatically.</div>
       </div>
     </section>
 
     <footer class="footer">
-      <p>Rebate — personal savings tracker. Data stays on your device (browser local storage).</p>
+      <div class="muted small">
+        Tune Pin is a concept demo website. For real-world rebates, you’d integrate store offers, receipts,
+        or partner rebate systems.
+      </div>
     </footer>
   </main>
 
