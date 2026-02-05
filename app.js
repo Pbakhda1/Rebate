@@ -1,7 +1,4 @@
-// Tune Pin — Savings & Rewards Demo
-// Stores entries in localStorage so the data stays after refresh.
-
-const STORAGE_KEY = "tunepin_entries_v1";
+const STORAGE_KEY = "rebate_entries_v3";
 
 const form = document.getElementById("entryForm");
 const storeEl = document.getElementById("store");
@@ -26,66 +23,62 @@ const tierProgressTextEl = document.getElementById("tierProgressText");
 const progressFillEl = document.getElementById("progressFill");
 const tiersListEl = document.getElementById("tiersList");
 
-// You can customize these prize tiers anytime:
+// Prize tiers (edit these any time)
 const TIERS = [
-  { name: "Starter", target: 500, prize: "Mystery Bonus (digital)" },
-  { name: "Saver", target: 1500, prize: "Gift Card Entry" },
-  { name: "Super Saver", target: 3000, prize: "Monthly Prize Draw" },
-  { name: "Elite Saver", target: 5000, prize: "Premium Prize Pack" }
+  { name: "Starter", target: 500, prize: "Bonus entry (digital)" },
+  { name: "Saver", target: 1500, prize: "Gift card entry" },
+  { name: "Super Saver", target: 3000, prize: "Monthly prize draw" },
+  { name: "Elite Saver", target: 5000, prize: "Premium prize pack" }
 ];
 
-function money(n) {
-  const val = Number(n || 0);
-  return val.toLocaleString(undefined, { style: "currency", currency: "USD" });
+function money(n){
+  const v = Number(n || 0);
+  return v.toLocaleString(undefined, { style:"currency", currency:"USD" });
 }
-
-function todayISO() {
+function todayISO(){
   const d = new Date();
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
   return `${yyyy}-${mm}-${dd}`;
 }
-
-function loadEntries() {
-  try {
+function loadEntries(){
+  try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if(!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  }catch{
     return [];
   }
 }
-
-function saveEntries(entries) {
+function saveEntries(entries){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
-
-function computeTotals(entries) {
-  let gross = 0;
-  let fees = 0;
-  for (const e of entries) {
+function computeTotals(entries){
+  let gross=0, fees=0;
+  for(const e of entries){
     gross += Number(e.savings || 0);
-    fees += Number(e.fee || 0);
+    fees  += Number(e.fee || 0);
   }
-  const net = gross - fees;
-  return { gross, fees, net };
+  return { gross, fees, net: gross - fees };
 }
-
-function escapeHtml(str) {
+function escapeHtml(str){
   return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
-
-function renderTiers(netSavings) {
-  // Render tier cards
+function matchesSearch(e, q){
+  if(!q) return true;
+  const hay = `${e.store} ${e.item} ${e.date}`.toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+function renderTiers(netSavings){
   tiersListEl.innerHTML = "";
-  for (const t of TIERS) {
+  for(const t of TIERS){
     const div = document.createElement("div");
     div.className = "tier-card";
     div.innerHTML = `
@@ -95,62 +88,42 @@ function renderTiers(netSavings) {
     tiersListEl.appendChild(div);
   }
 
-  // Find current/next tier based on NET savings (you can switch to gross if you prefer)
-  const nextTier = TIERS.find(t => netSavings < t.target) || TIERS[TIERS.length - 1];
-  const prevTarget = (() => {
-    const idx = TIERS.indexOf(nextTier);
-    return idx <= 0 ? 0 : TIERS[idx - 1].target;
-  })();
+  const next = TIERS.find(t => netSavings < t.target) || TIERS[TIERS.length-1];
+  const idx = TIERS.indexOf(next);
+  const prevTarget = idx <= 0 ? 0 : TIERS[idx-1].target;
 
-  const currentName = (() => {
-    if (netSavings >= TIERS[TIERS.length - 1].target) return TIERS[TIERS.length - 1].name;
-    const idx = TIERS.indexOf(nextTier);
-    return idx <= 0 ? TIERS[0].name : TIERS[idx - 1].name;
-  })();
+  const currentName =
+    netSavings >= TIERS[TIERS.length-1].target
+      ? TIERS[TIERS.length-1].name
+      : (idx <= 0 ? TIERS[0].name : TIERS[idx-1].name);
 
   tierNameEl.textContent = currentName;
 
-  const span = nextTier.target - prevTarget;
-  const progress = span <= 0 ? 1 : (netSavings - prevTarget) / span;
-  const clamped = Math.max(0, Math.min(1, progress));
-  progressFillEl.style.width = `${clamped * 100}%`;
+  const span = next.target - prevTarget;
+  const prog = span <= 0 ? 1 : (netSavings - prevTarget) / span;
+  const pct = Math.max(0, Math.min(1, prog)) * 100;
+  progressFillEl.style.width = `${pct}%`;
 
-  const shownTarget = nextTier.target;
-  tierProgressTextEl.textContent = `${money(Math.max(0, netSavings))} / ${money(shownTarget)}`;
+  tierProgressTextEl.textContent = `${money(Math.max(0, netSavings))} / ${money(next.target)}`;
 }
-
-function matchesSearch(e, q) {
-  if (!q) return true;
-  const hay = `${e.store} ${e.item} ${e.date}`.toLowerCase();
-  return hay.includes(q.toLowerCase());
-}
-
-function render() {
+function render(){
   const entries = loadEntries();
   const q = (searchEl.value || "").trim();
   const filtered = entries.filter(e => matchesSearch(e, q));
 
-  // Totals
   const { gross, fees, net } = computeTotals(entries);
   grossTotalEl.textContent = money(gross);
   feeTotalEl.textContent = money(fees);
   netTotalEl.textContent = money(net);
   entryCountEl.textContent = String(entries.length);
 
-  // Rewards
   renderTiers(net);
 
-  // Table
   tbody.innerHTML = "";
-  if (filtered.length === 0) {
-    emptyState.style.display = "block";
-  } else {
-    emptyState.style.display = "none";
-  }
+  emptyState.style.display = filtered.length === 0 ? "block" : "none";
 
-  for (const e of filtered) {
+  for(const e of filtered){
     const tr = document.createElement("tr");
-
     const netRow = Number(e.savings || 0) - Number(e.fee || 0);
 
     tr.innerHTML = `
@@ -162,11 +135,9 @@ function render() {
       <td class="right">${money(netRow)}</td>
       <td class="right"><button class="btn" data-del="${escapeHtml(e.id)}">Delete</button></td>
     `;
-
     tbody.appendChild(tr);
   }
 
-  // wire delete buttons
   tbody.querySelectorAll("button[data-del]").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-del");
@@ -177,11 +148,11 @@ function render() {
   });
 }
 
-// Init
+// init
 dateEl.value = todayISO();
 render();
 
-// Add entry
+// add entry
 form.addEventListener("submit", (ev) => {
   ev.preventDefault();
 
@@ -191,10 +162,11 @@ form.addEventListener("submit", (ev) => {
   const fee = Number(feeEl.value || 0);
   const date = (dateEl.value || todayISO()).trim();
 
-  if (!store || !item) return;
-  if (!Number.isFinite(savings) || savings < 0) return;
-  if (!Number.isFinite(fee) || fee < 0) return;
-  if (fee > savings) {
+  if(!store || !item) return;
+  if(!Number.isFinite(savings) || savings < 0) return;
+  if(!Number.isFinite(fee) || fee < 0) return;
+
+  if(fee > savings){
     alert("Fee cannot be greater than savings for this entry.");
     return;
   }
@@ -211,7 +183,6 @@ form.addEventListener("submit", (ev) => {
   const updated = [entry, ...loadEntries()];
   saveEntries(updated);
 
-  // reset
   storeEl.value = "";
   itemEl.value = "";
   savingsEl.value = "";
@@ -221,13 +192,13 @@ form.addEventListener("submit", (ev) => {
   render();
 });
 
-// Search
-searchEl.addEventListener("input", () => render());
+// search
+searchEl.addEventListener("input", render);
 
-// Clear all
+// clear all
 clearAllBtn.addEventListener("click", () => {
   const ok = confirm("Clear ALL entries? This cannot be undone.");
-  if (!ok) return;
-  localStorage.removeItem("tunepin_entries_v1");
+  if(!ok) return;
+  localStorage.removeItem(STORAGE_KEY);
   render();
 });
