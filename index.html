@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rebate — Savings Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">$</div>
+        <div>
+          <h1 class="brand-title">Rebate</h1>
+          <p class="brand-subtitle">Track rebates, discounts, and savings in one place.</p>
+        </div>
+      </div>
+
+      <div class="creator">
+        <span class="creator-label">Created by</span>
+        <span class="creator-name">Parth Pankaj Bakhda</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="summary">
+      <div class="summary-card">
+        <p class="summary-label">Total Savings</p>
+        <h2 class="summary-value" id="totalSavings">$0</h2>
+        <p class="summary-hint" id="summaryHint">Add your first rebate below.</p>
+      </div>
+
+      <div class="summary-card subtle">
+        <p class="summary-label">Entries</p>
+        <h2 class="summary-value" id="entryCount">0</h2>
+        <p class="summary-hint">Saved locally in your browser.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h3>Add a Savings Entry</h3>
+        <p>Example: Store “Costco”, Item “Fridge”, Savings “500”.</p>
+      </div>
+
+      <form id="rebateForm" class="form">
+        <div class="grid">
+          <label class="field">
+            <span class="field-label">Store (optional)</span>
+            <input type="text" id="store" placeholder="Costco" maxlength="40" />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Item / Description</span>
+            <input type="text" id="item" placeholder="Fridge" maxlength="60" required />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Savings Amount (USD)</span>
+            <input type="number" id="amount" placeholder="500" min="0" step="0.01" required />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Date</span>
+            <input type="date" id="date" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn primary">Add Savings</button>
+          <button type="button" class="btn" id="clearAllBtn">Clear All</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header row">
+        <div>
+          <h3>Your Savings List</h3>
+          <p>Search, review, and remove entries anytime.</p>
+        </div>
+
+        <div class="search">
+          <input type="search" id="search" placeholder="Search: fridge, Costco, couch..." />
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" aria-label="Savings table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Store</th>
+              <th>Description</th>
+              <th class="right">Savings</th>
+              <th class="right">Action</th>
+            </tr>
+          </thead>
+          <tbody id="rebateTableBody">
+            <!-- Rows injected by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty" id="emptyState">
+        <p><strong>No entries yet.</strong> Add savings above (like “$500 off fridge”) and it will total everything automatically.</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>Rebate — personal savings tracker. Data stays on your device (browser local storage).</p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
