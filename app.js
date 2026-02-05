@@ -1,35 +1,52 @@
-const STORAGE_KEY = "rebate_entries_v3";
+// Rebate — Savings + Rewards + Redemption + Bundles (LocalStorage demo)
 
-const form = document.getElementById("entryForm");
-const storeEl = document.getElementById("store");
-const itemEl = document.getElementById("item");
-const savingsEl = document.getElementById("savings");
-const feeEl = document.getElementById("fee");
-const dateEl = document.getElementById("date");
+const ENTRIES_KEY = "rebate_entries_v4";
+const REDEEM_KEY  = "rebate_redemptions_v1";
+const BUNDLE_KEY  = "rebate_bundles_v1";
 
-const grossTotalEl = document.getElementById("grossTotal");
-const feeTotalEl = document.getElementById("feeTotal");
-const netTotalEl = document.getElementById("netTotal");
-const entryCountEl = document.getElementById("entryCount");
-
-const tbody = document.getElementById("tbody");
-const emptyState = document.getElementById("emptyState");
-
-const searchEl = document.getElementById("search");
-const clearAllBtn = document.getElementById("clearAllBtn");
-
-const tierNameEl = document.getElementById("tierName");
-const tierProgressTextEl = document.getElementById("tierProgressText");
-const progressFillEl = document.getElementById("progressFill");
-const tiersListEl = document.getElementById("tiersList");
-
-// Prize tiers (edit these any time)
+// Prize tiers (net savings based)
 const TIERS = [
-  { name: "Starter", target: 500, prize: "Bonus entry (digital)" },
-  { name: "Saver", target: 1500, prize: "Gift card entry" },
-  { name: "Super Saver", target: 3000, prize: "Monthly prize draw" },
-  { name: "Elite Saver", target: 5000, prize: "Premium prize pack" }
+  { name: "Starter", target: 500,  prize: "Bonus Entry (digital)" },
+  { name: "Saver",   target: 1500, prize: "Gift Card Entry" },
+  { name: "Super Saver", target: 3000, prize: "Monthly Prize Draw" },
+  { name: "Elite Saver", target: 5000, prize: "Premium Prize Pack" }
 ];
+
+// A more “prize-like” list (each tied to a tier)
+const PRIZES = [
+  { id: "starter_bonus", tierTarget: 500,  name: "Starter Bonus", detail: "Digital bonus entry / perk" },
+  { id: "saver_gift",    tierTarget: 1500, name: "Saver Prize", detail: "Gift card entry (demo)" },
+  { id: "super_draw",    tierTarget: 3000, name: "Super Saver Draw", detail: "Monthly prize draw entry (demo)" },
+  { id: "elite_pack",    tierTarget: 5000, name: "Elite Prize Pack", detail: "Premium prize pack (demo)" }
+];
+
+// Demo manufacturer catalog (you can edit/add)
+const CATALOG = {
+  "Whirlpool": {
+    "Appliances": [
+      { sku: "WH-OVEN-01", name: "Whirlpool Oven", price: 1500 },
+      { sku: "WH-FRIDGE-02", name: "Whirlpool Fridge", price: 2100 },
+      { sku: "WH-DW-03", name: "Whirlpool Dishwasher", price: 900 },
+      { sku: "WH-MW-04", name: "Whirlpool Microwave", price: 450 }
+    ]
+  },
+  "Samsung": {
+    "Appliances": [
+      { sku: "SA-OVEN-01", name: "Samsung Oven", price: 1600 },
+      { sku: "SA-FRIDGE-02", name: "Samsung Fridge", price: 2300 },
+      { sku: "SA-WASH-03", name: "Samsung Washer", price: 1100 },
+      { sku: "SA-DRY-04", name: "Samsung Dryer", price: 950 }
+    ]
+  },
+  "LG": {
+    "Appliances": [
+      { sku: "LG-OVEN-01", name: "LG Oven", price: 1550 },
+      { sku: "LG-FRIDGE-02", name: "LG Fridge", price: 2200 },
+      { sku: "LG-RANGE-03", name: "LG Range", price: 1400 },
+      { sku: "LG-DW-04", name: "LG Dishwasher", price: 880 }
+    ]
+  }
+};
 
 function money(n){
   const v = Number(n || 0);
@@ -42,9 +59,17 @@ function todayISO(){
   const dd = String(d.getDate()).padStart(2,"0");
   return `${yyyy}-${mm}-${dd}`;
 }
-function loadEntries(){
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function load(key){
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if(!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -52,8 +77,8 @@ function loadEntries(){
     return [];
   }
 }
-function saveEntries(entries){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+function save(key, data){
+  localStorage.setItem(key, JSON.stringify(data));
 }
 function computeTotals(entries){
   let gross=0, fees=0;
@@ -63,31 +88,12 @@ function computeTotals(entries){
   }
   return { gross, fees, net: gross - fees };
 }
-function escapeHtml(str){
-  return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+function getNetSavings(){
+  const entries = load(ENTRIES_KEY);
+  const { net } = computeTotals(entries);
+  return net;
 }
-function matchesSearch(e, q){
-  if(!q) return true;
-  const hay = `${e.store} ${e.item} ${e.date}`.toLowerCase();
-  return hay.includes(q.toLowerCase());
-}
-function renderTiers(netSavings){
-  tiersListEl.innerHTML = "";
-  for(const t of TIERS){
-    const div = document.createElement("div");
-    div.className = "tier-card";
-    div.innerHTML = `
-      <strong>${escapeHtml(t.name)}</strong>
-      <div class="muted">Unlock at ${money(t.target)} • Prize: ${escapeHtml(t.prize)}</div>
-    `;
-    tiersListEl.appendChild(div);
-  }
-
+function tierProgress(netSavings){
   const next = TIERS.find(t => netSavings < t.target) || TIERS[TIERS.length-1];
   const idx = TIERS.indexOf(next);
   const prevTarget = idx <= 0 ? 0 : TIERS[idx-1].target;
@@ -97,108 +103,464 @@ function renderTiers(netSavings){
       ? TIERS[TIERS.length-1].name
       : (idx <= 0 ? TIERS[0].name : TIERS[idx-1].name);
 
-  tierNameEl.textContent = currentName;
-
   const span = next.target - prevTarget;
   const prog = span <= 0 ? 1 : (netSavings - prevTarget) / span;
   const pct = Math.max(0, Math.min(1, prog)) * 100;
-  progressFillEl.style.width = `${pct}%`;
 
-  tierProgressTextEl.textContent = `${money(Math.max(0, netSavings))} / ${money(next.target)}`;
+  return { currentName, nextTarget: next.target, pct };
 }
-function render(){
-  const entries = loadEntries();
-  const q = (searchEl.value || "").trim();
-  const filtered = entries.filter(e => matchesSearch(e, q));
 
-  const { gross, fees, net } = computeTotals(entries);
-  grossTotalEl.textContent = money(gross);
-  feeTotalEl.textContent = money(fees);
-  netTotalEl.textContent = money(net);
-  entryCountEl.textContent = String(entries.length);
+// ---------- DASHBOARD (index.html) ----------
+function initDashboard(){
+  const form = document.getElementById("entryForm");
+  if(!form) return; // not on this page
 
-  renderTiers(net);
+  const storeEl = document.getElementById("store");
+  const itemEl = document.getElementById("item");
+  const savingsEl = document.getElementById("savings");
+  const feeEl = document.getElementById("fee");
+  const dateEl = document.getElementById("date");
 
-  tbody.innerHTML = "";
-  emptyState.style.display = filtered.length === 0 ? "block" : "none";
+  const grossTotalEl = document.getElementById("grossTotal");
+  const feeTotalEl = document.getElementById("feeTotal");
+  const netTotalEl = document.getElementById("netTotal");
+  const entryCountEl = document.getElementById("entryCount");
 
-  for(const e of filtered){
-    const tr = document.createElement("tr");
-    const netRow = Number(e.savings || 0) - Number(e.fee || 0);
+  const tbody = document.getElementById("tbody");
+  const emptyState = document.getElementById("emptyState");
 
-    tr.innerHTML = `
-      <td>${escapeHtml(e.date || "—")}</td>
-      <td>${e.store ? `<span class="pill">${escapeHtml(e.store)}</span>` : `<span class="muted">—</span>`}</td>
-      <td>${escapeHtml(e.item || "")}</td>
-      <td class="right">${money(e.savings)}</td>
-      <td class="right">${money(e.fee)}</td>
-      <td class="right">${money(netRow)}</td>
-      <td class="right"><button class="btn" data-del="${escapeHtml(e.id)}">Delete</button></td>
-    `;
-    tbody.appendChild(tr);
+  const searchEl = document.getElementById("search");
+  const clearAllBtn = document.getElementById("clearAllBtn");
+
+  const tierNameEl = document.getElementById("tierName");
+  const tierProgressTextEl = document.getElementById("tierProgressText");
+  const progressFillEl = document.getElementById("progressFill");
+  const tiersListEl = document.getElementById("tiersList");
+
+  function matchesSearch(e, q){
+    if(!q) return true;
+    const hay = `${e.store} ${e.item} ${e.date}`.toLowerCase();
+    return hay.includes(q.toLowerCase());
   }
 
-  tbody.querySelectorAll("button[data-del]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-del");
-      const updated = loadEntries().filter(x => x.id !== id);
-      saveEntries(updated);
-      render();
+  function renderTiers(netSavings){
+    tiersListEl.innerHTML = "";
+    for(const t of TIERS){
+      const div = document.createElement("div");
+      div.className = "tier-card";
+      div.innerHTML = `
+        <strong>${escapeHtml(t.name)}</strong>
+        <div class="muted">Unlock at ${money(t.target)} • Prize: ${escapeHtml(t.prize)}</div>
+      `;
+      tiersListEl.appendChild(div);
+    }
+
+    const tp = tierProgress(netSavings);
+    tierNameEl.textContent = tp.currentName;
+    progressFillEl.style.width = `${tp.pct}%`;
+    tierProgressTextEl.textContent = `${money(Math.max(0, netSavings))} / ${money(tp.nextTarget)}`;
+  }
+
+  function render(){
+    const entries = load(ENTRIES_KEY);
+    const q = (searchEl.value || "").trim();
+    const filtered = entries.filter(e => matchesSearch(e, q));
+
+    const { gross, fees, net } = computeTotals(entries);
+    grossTotalEl.textContent = money(gross);
+    feeTotalEl.textContent = money(fees);
+    netTotalEl.textContent = money(net);
+    entryCountEl.textContent = String(entries.length);
+
+    renderTiers(net);
+
+    tbody.innerHTML = "";
+    emptyState.style.display = filtered.length === 0 ? "block" : "none";
+
+    for(const e of filtered){
+      const netRow = Number(e.savings || 0) - Number(e.fee || 0);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(e.date || "—")}</td>
+        <td>${escapeHtml(e.store || "—")}</td>
+        <td>${escapeHtml(e.item || "")}</td>
+        <td class="right">${money(e.savings)}</td>
+        <td class="right">${money(e.fee)}</td>
+        <td class="right">${money(netRow)}</td>
+        <td class="right"><button class="btn" data-del="${escapeHtml(e.id)}">Delete</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    tbody.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-del");
+        const updated = load(ENTRIES_KEY).filter(x => x.id !== id);
+        save(ENTRIES_KEY, updated);
+        render();
+      });
     });
+  }
+
+  // init
+  dateEl.value = todayISO();
+  render();
+
+  form.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+
+    const store = (storeEl.value || "").trim();
+    const item = (itemEl.value || "").trim();
+    const savings = Number(savingsEl.value);
+    const fee = Number(feeEl.value || 0);
+    const date = (dateEl.value || todayISO()).trim();
+
+    if(!store || !item) return;
+    if(!Number.isFinite(savings) || savings < 0) return;
+    if(!Number.isFinite(fee) || fee < 0) return;
+
+    if(fee > savings){
+      alert("Fee cannot be greater than savings for this entry.");
+      return;
+    }
+
+    const entry = {
+      id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+      store,
+      item,
+      savings,
+      fee,
+      date
+    };
+
+    const updated = [entry, ...load(ENTRIES_KEY)];
+    save(ENTRIES_KEY, updated);
+
+    storeEl.value = "";
+    itemEl.value = "";
+    savingsEl.value = "";
+    feeEl.value = "";
+    dateEl.value = todayISO();
+
+    render();
+  });
+
+  searchEl.addEventListener("input", render);
+
+  clearAllBtn.addEventListener("click", () => {
+    const ok = confirm("Clear ALL entries? This cannot be undone.");
+    if(!ok) return;
+    localStorage.removeItem(ENTRIES_KEY);
+    render();
   });
 }
 
-// init
-dateEl.value = todayISO();
-render();
+// ---------- REDEEM PAGE (redeem.html) ----------
+function initRedeem(){
+  const prizeList = document.getElementById("prizeList");
+  if(!prizeList) return; // not on this page
 
-// add entry
-form.addEventListener("submit", (ev) => {
-  ev.preventDefault();
+  const redeemNet = document.getElementById("redeemNet");
+  const unlockedCount = document.getElementById("unlockedCount");
+  const redeemedCount = document.getElementById("redeemedCount");
+  const availableCount = document.getElementById("availableCount");
 
-  const store = (storeEl.value || "").trim();
-  const item = (itemEl.value || "").trim();
-  const savings = Number(savingsEl.value);
-  const fee = Number(feeEl.value || 0);
-  const date = (dateEl.value || todayISO()).trim();
+  const tbody = document.getElementById("redeemTbody");
+  const empty = document.getElementById("redeemEmpty");
+  const clearBtn = document.getElementById("clearRedemptionsBtn");
 
-  if(!store || !item) return;
-  if(!Number.isFinite(savings) || savings < 0) return;
-  if(!Number.isFinite(fee) || fee < 0) return;
+  function render(){
+    const net = getNetSavings();
+    const redemptions = load(REDEEM_KEY);
 
-  if(fee > savings){
-    alert("Fee cannot be greater than savings for this entry.");
-    return;
+    redeemNet.textContent = money(net);
+
+    const redeemedIds = new Set(redemptions.map(r => r.prizeId));
+    const unlocked = PRIZES.filter(p => net >= p.tierTarget);
+    const available = unlocked.filter(p => !redeemedIds.has(p.id));
+
+    unlockedCount.textContent = String(unlocked.length);
+    redeemedCount.textContent = String(redemptions.length);
+    availableCount.textContent = String(available.length);
+
+    // prize cards
+    prizeList.innerHTML = "";
+    for(const p of PRIZES){
+      const isUnlocked = net >= p.tierTarget;
+      const isRedeemed = redeemedIds.has(p.id);
+
+      const div = document.createElement("div");
+      div.className = "prize";
+
+      div.innerHTML = `
+        <div>
+          <div class="title">${escapeHtml(p.name)}</div>
+          <div class="meta">
+            <span class="badge ${isUnlocked ? "" : "locked"}">${isUnlocked ? "Unlocked" : "Locked"}</span>
+            <span class="badge">${money(p.tierTarget)} tier</span>
+            <div class="muted">${escapeHtml(p.detail)}</div>
+          </div>
+        </div>
+        <div class="prize-actions">
+          <div class="muted small">${isRedeemed ? "Already redeemed" : (isUnlocked ? "Ready to redeem" : "Not available yet")}</div>
+          <button class="btn ${isUnlocked && !isRedeemed ? "primary" : ""}" ${isUnlocked && !isRedeemed ? "" : "disabled"}>
+            ${isRedeemed ? "Redeemed" : (isUnlocked ? "Redeem" : "Locked")}
+          </button>
+        </div>
+      `;
+
+      const btn = div.querySelector("button");
+      btn.addEventListener("click", () => {
+        if(!isUnlocked || isRedeemed) return;
+
+        const ok = confirm(`Redeem "${p.name}" now? (Demo records redemption)`);
+        if(!ok) return;
+
+        const updated = [
+          {
+            id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+            prizeId: p.id,
+            prizeName: p.name,
+            tierTarget: p.tierTarget,
+            date: new Date().toISOString()
+          },
+          ...load(REDEEM_KEY)
+        ];
+        save(REDEEM_KEY, updated);
+        render();
+      });
+
+      prizeList.appendChild(div);
+    }
+
+    // history table
+    tbody.innerHTML = "";
+    if(redemptions.length === 0){
+      empty.style.display = "block";
+    }else{
+      empty.style.display = "none";
+    }
+
+    for(const r of redemptions){
+      const d = new Date(r.date);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(d.toLocaleString())}</td>
+        <td>${escapeHtml(r.prizeName)}</td>
+        <td class="right">${money(r.tierTarget)}</td>
+        <td class="right">Redeemed</td>
+      `;
+      tbody.appendChild(tr);
+    }
   }
 
-  const entry = {
-    id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
-    store,
-    item,
-    savings,
-    fee,
-    date
-  };
-
-  const updated = [entry, ...loadEntries()];
-  saveEntries(updated);
-
-  storeEl.value = "";
-  itemEl.value = "";
-  savingsEl.value = "";
-  feeEl.value = "";
-  dateEl.value = todayISO();
+  clearBtn.addEventListener("click", () => {
+    const ok = confirm("Clear redemption history? This cannot be undone.");
+    if(!ok) return;
+    localStorage.removeItem(REDEEM_KEY);
+    render();
+  });
 
   render();
-});
+}
 
-// search
-searchEl.addEventListener("input", render);
+// ---------- BUNDLES PAGE (bundles.html) ----------
+function initBundles(){
+  const mfgSelect = document.getElementById("mfgSelect");
+  if(!mfgSelect) return; // not on this page
 
-// clear all
-clearAllBtn.addEventListener("click", () => {
-  const ok = confirm("Clear ALL entries? This cannot be undone.");
-  if(!ok) return;
-  localStorage.removeItem(STORAGE_KEY);
-  render();
-});
+  const catSelect = document.getElementById("catSelect");
+  const bundleFeeInput = document.getElementById("bundleFee");
+  const mfgDiscountInput = document.getElementById("mfgDiscount");
+
+  const itemsWrap = document.getElementById("bundleItems");
+
+  const outCount = document.getElementById("bundleCount");
+  const outSubtotal = document.getElementById("bundleSubtotal");
+  const outDiscount = document.getElementById("bundleDiscount");
+  const outFee = document.getElementById("bundleFeeOut");
+  const outTotal = document.getElementById("bundleTotal");
+
+  const saveBtn = document.getElementById("saveBundleBtn");
+  const tbody = document.getElementById("bundleTbody");
+  const empty = document.getElementById("bundleEmpty");
+  const clearBtn = document.getElementById("clearBundlesBtn");
+
+  function manufacturers(){
+    return Object.keys(CATALOG);
+  }
+  function categories(mfg){
+    return Object.keys(CATALOG[mfg] || {});
+  }
+  function items(mfg, cat){
+    return (CATALOG[mfg] && CATALOG[mfg][cat]) ? CATALOG[mfg][cat] : [];
+  }
+
+  function fillManufacturers(){
+    mfgSelect.innerHTML = "";
+    for(const m of manufacturers()){
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      mfgSelect.appendChild(opt);
+    }
+  }
+  function fillCategories(){
+    const m = mfgSelect.value;
+    catSelect.innerHTML = "";
+    for(const c of categories(m)){
+      const opt = document.createElement("option");
+      opt.value = c;
+      opt.textContent = c;
+      catSelect.appendChild(opt);
+    }
+  }
+
+  function selectedSkus(){
+    return Array.from(itemsWrap.querySelectorAll("input[type=checkbox]:checked"))
+      .map(cb => cb.value);
+  }
+
+  function renderItems(){
+    const m = mfgSelect.value;
+    const c = catSelect.value;
+    const list = items(m, c);
+
+    itemsWrap.innerHTML = "";
+    for(const it of list){
+      const div = document.createElement("div");
+      div.className = "bundle-item";
+      div.innerHTML = `
+        <label>
+          <input type="checkbox" value="${escapeHtml(it.sku)}" />
+          <div>
+            <div><strong>${escapeHtml(it.name)}</strong></div>
+            <div class="muted small">SKU: ${escapeHtml(it.sku)}</div>
+          </div>
+        </label>
+        <div class="right"><strong>${money(it.price)}</strong></div>
+      `;
+      const cb = div.querySelector("input");
+      cb.addEventListener("change", renderSummary);
+      itemsWrap.appendChild(div);
+    }
+
+    renderSummary();
+  }
+
+  function renderSummary(){
+    const m = mfgSelect.value;
+    const c = catSelect.value;
+    const list = items(m, c);
+
+    const skus = selectedSkus();
+    let subtotal = 0;
+    for(const it of list){
+      if(skus.includes(it.sku)) subtotal += Number(it.price || 0);
+    }
+
+    const discount = Number(mfgDiscountInput.value || 0);
+    const fee = Number(bundleFeeInput.value || 0);
+
+    const total = Math.max(0, subtotal - discount) + fee;
+
+    outCount.textContent = String(skus.length);
+    outSubtotal.textContent = money(subtotal);
+    outDiscount.textContent = money(discount);
+    outFee.textContent = money(fee);
+    outTotal.textContent = money(total);
+  }
+
+  function renderSavedBundles(){
+    const bundles = load(BUNDLE_KEY);
+    tbody.innerHTML = "";
+    empty.style.display = bundles.length === 0 ? "block" : "none";
+
+    for(const b of bundles){
+      const d = new Date(b.date);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(d.toLocaleString())}</td>
+        <td>${escapeHtml(b.manufacturer)}</td>
+        <td>${escapeHtml(b.category)}</td>
+        <td class="right">${escapeHtml(String(b.count))}</td>
+        <td class="right">${money(b.subtotal)}</td>
+        <td class="right">${money(b.discount)}</td>
+        <td class="right">${money(b.fee)}</td>
+        <td class="right">${money(b.total)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // events
+  mfgSelect.addEventListener("change", () => {
+    fillCategories();
+    renderItems();
+  });
+  catSelect.addEventListener("change", renderItems);
+  bundleFeeInput.addEventListener("input", renderSummary);
+  mfgDiscountInput.addEventListener("input", renderSummary);
+
+  saveBtn.addEventListener("click", () => {
+    const m = mfgSelect.value;
+    const c = catSelect.value;
+    const skus = selectedSkus();
+    if(skus.length === 0){
+      alert("Select at least 1 bundle item.");
+      return;
+    }
+
+    const list = items(m, c);
+    let subtotal = 0;
+    const chosen = [];
+    for(const it of list){
+      if(skus.includes(it.sku)){
+        subtotal += Number(it.price || 0);
+        chosen.push({ sku: it.sku, name: it.name, price: it.price });
+      }
+    }
+
+    const discount = Number(mfgDiscountInput.value || 0);
+    const fee = Number(bundleFeeInput.value || 0);
+    const total = Math.max(0, subtotal - discount) + fee;
+
+    const record = {
+      id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+      date: new Date().toISOString(),
+      manufacturer: m,
+      category: c,
+      items: chosen,
+      count: chosen.length,
+      subtotal,
+      discount,
+      fee,
+      total
+    };
+
+    const updated = [record, ...load(BUNDLE_KEY)];
+    save(BUNDLE_KEY, updated);
+
+    // optional: also count bundle fee toward funding — but not changing savings totals in dashboard
+    alert("Bundle saved (demo).");
+    renderSavedBundles();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    const ok = confirm("Clear all saved bundles? This cannot be undone.");
+    if(!ok) return;
+    localStorage.removeItem(BUNDLE_KEY);
+    renderSavedBundles();
+  });
+
+  // init
+  fillManufacturers();
+  fillCategories();
+  renderItems();
+  renderSavedBundles();
+}
+
+// Boot all pages safely
+initDashboard();
+initRedeem();
+initBundles();

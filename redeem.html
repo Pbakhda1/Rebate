@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rebate — Redeem Prizes</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="header">
+  <div class="container header-inner">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">R</div>
+      <div class="brand-text">
+        <h1>Rebate</h1>
+        <p>Redeem unlocked prizes based on your net savings.</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <nav class="nav">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link active" href="redeem.html">Redeem</a>
+        <a class="nav-link" href="bundles.html">Bundles</a>
+      </nav>
+
+      <div class="creator">
+        <span class="muted">Created by</span>
+        <span class="creator-name">Parth Pankaj Bakhda</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="grid-2">
+    <div class="card">
+      <h2>Redemption Center</h2>
+      <p class="muted">
+        Prizes unlock as your <strong>net savings</strong> grows. Click Redeem to record a redemption.
+        (Demo only — this page shows how redemption would work.)
+      </p>
+
+      <div class="metrics">
+        <div class="metric">
+          <span class="label">Net Savings</span>
+          <span class="value accent" id="redeemNet">$0</span>
+        </div>
+        <div class="metric">
+          <span class="label">Unlocked Prizes</span>
+          <span class="value" id="unlockedCount">0</span>
+        </div>
+        <div class="metric">
+          <span class="label">Redeemed Prizes</span>
+          <span class="value" id="redeemedCount">0</span>
+        </div>
+        <div class="metric">
+          <span class="label">Available Now</span>
+          <span class="value" id="availableCount">0</span>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>How it works:</strong> Instant rebate fees (e.g., $25) and bundle fees (e.g., $50)
+        help fund rewards and prize pools.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Unlocked Prizes</h3>
+      <p class="muted">Redeem what you’ve unlocked. Locked prizes will show as unavailable.</p>
+
+      <div id="prizeList" class="prize-list"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head row">
+      <div>
+        <h3>Redemption History</h3>
+        <p class="muted">Saved locally in your browser.</p>
+      </div>
+      <button class="btn ghost" id="clearRedemptionsBtn" type="button">Clear Redemptions</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Prize</th>
+            <th class="right">Tier Target</th>
+            <th class="right">Status</th>
+          </tr>
+        </thead>
+        <tbody id="redeemTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="empty" id="redeemEmpty">
+      <strong>No redemptions yet.</strong>
+      <div class="muted">Redeem an unlocked prize above to see it here.</div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="muted small">
+      Demo: In a real app, redemption would issue a code, store credit, gift card, or verified reward.
+    </div>
+  </footer>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

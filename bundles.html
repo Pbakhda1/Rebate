@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rebate — Manufacturer Bundles</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="header">
+  <div class="container header-inner">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">R</div>
+      <div class="brand-text">
+        <h1>Rebate</h1>
+        <p>Bundle discounts from the same manufacturer. Bigger bundle → bigger value.</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <nav class="nav">
+        <a class="nav-link" href="index.html">Dashboard</a>
+        <a class="nav-link" href="redeem.html">Redeem</a>
+        <a class="nav-link active" href="bundles.html">Bundles</a>
+      </nav>
+
+      <div class="creator">
+        <span class="muted">Created by</span>
+        <span class="creator-name">Parth Pankaj Bakhda</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="grid-2">
+    <div class="card">
+      <h2>Manufacturer Bundle Builder</h2>
+      <p class="muted">
+        If a manufacturer offers an instant discount (ex: $500 off an oven), Rebate can work with the manufacturer
+        to provide a list of discounted items in the same category (appliances, etc.). You choose more items → bigger bundle.
+        Rebate charges a bundle fee (example: $50).
+      </p>
+
+      <div class="bundle-controls">
+        <label class="field">
+          <span class="muted small">Manufacturer</span>
+          <select id="mfgSelect"></select>
+        </label>
+
+        <label class="field">
+          <span class="muted small">Category</span>
+          <select id="catSelect"></select>
+        </label>
+
+        <label class="field">
+          <span class="muted small">Bundle Fee (USD)</span>
+          <input id="bundleFee" type="number" min="0" step="0.01" value="50" />
+        </label>
+
+        <label class="field">
+          <span class="muted small">Manufacturer Instant Discount (USD)</span>
+          <input id="mfgDiscount" type="number" min="0" step="0.01" value="500" />
+        </label>
+      </div>
+
+      <div class="note">
+        <strong>Concept:</strong> Manufacturer provides the discount instantly. Rebate organizes the bundle and charges a set bundle fee.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Bundle Items</h3>
+      <p class="muted">Select products from the same manufacturer & category.</p>
+
+      <div id="bundleItems" class="bundle-items"></div>
+
+      <div class="bundle-summary">
+        <div class="summary-row">
+          <span class="muted">Items selected</span>
+          <strong id="bundleCount">0</strong>
+        </div>
+        <div class="summary-row">
+          <span class="muted">Bundle subtotal</span>
+          <strong id="bundleSubtotal">$0</strong>
+        </div>
+        <div class="summary-row">
+          <span class="muted">Manufacturer discount</span>
+          <strong id="bundleDiscount">$0</strong>
+        </div>
+        <div class="summary-row">
+          <span class="muted">Bundle fee</span>
+          <strong id="bundleFeeOut">$0</strong>
+        </div>
+        <div class="summary-row total">
+          <span>Total after discount + fee</span>
+          <strong id="bundleTotal">$0</strong>
+        </div>
+
+        <button class="btn primary" id="saveBundleBtn" type="button">Save Bundle</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head row">
+      <div>
+        <h3>Saved Bundles</h3>
+        <p class="muted">Your saved bundle plans (demo). Stored locally.</p>
+      </div>
+      <button class="btn ghost" id="clearBundlesBtn" type="button">Clear Bundles</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Manufacturer</th>
+            <th>Category</th>
+            <th class="right">Items</th>
+            <th class="right">Subtotal</th>
+            <th class="right">Discount</th>
+            <th class="right">Fee</th>
+            <th class="right">Total</th>
+          </tr>
+        </thead>
+        <tbody id="bundleTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="empty" id="bundleEmpty">
+      <strong>No bundles yet.</strong>
+      <div class="muted">Build a bundle above and click “Save Bundle”.</div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="muted small">
+      Demo: In production, bundle lists would come from manufacturer catalogs & negotiated discount schedules.
+    </div>
+  </footer>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

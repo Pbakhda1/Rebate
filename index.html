@@ -3,24 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rebate — Savings & Rewards</title>
+  <title>Rebate — Savings, Rewards & Bundles</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
 <header class="header">
   <div class="container header-inner">
     <div class="brand">
       <div class="logo" aria-hidden="true">R</div>
       <div class="brand-text">
         <h1>Rebate</h1>
-        <p>Track rebates and savings across trusted stores. Unlock prizes as you save.</p>
+        <p>Instant rebates + rewards + manufacturer bundles — all in one dashboard.</p>
       </div>
     </div>
 
-    <div class="creator">
-      <span class="muted">Created by</span>
-      <span class="creator-name">Parth Pankaj Bakhda</span>
+    <div class="header-right">
+      <nav class="nav">
+        <a class="nav-link active" href="index.html">Dashboard</a>
+        <a class="nav-link" href="redeem.html">Redeem</a>
+        <a class="nav-link" href="bundles.html">Bundles</a>
+      </nav>
+
+      <div class="creator">
+        <span class="muted">Created by</span>
+        <span class="creator-name">Parth Pankaj Bakhda</span>
+      </div>
     </div>
   </div>
 </header>
@@ -31,8 +38,8 @@
     <div class="card hero">
       <h2>Your Savings Dashboard</h2>
       <p class="muted">
-        Add savings entries like “$500 off fridge” and Rebate totals your savings instantly.
-        Fees can be applied per instant-rebate (example: $25 fee).
+        Add savings like “$500 off fridge” from trusted stores (Costco, Best Buy, etc.).
+        Rebate totals savings and tracks fees for instant redemption.
       </p>
 
       <div class="metrics">
@@ -41,7 +48,7 @@
           <span class="value" id="grossTotal">$0</span>
         </div>
         <div class="metric">
-          <span class="label">Rebate Fees</span>
+          <span class="label">Instant Rebate Fees</span>
           <span class="value" id="feeTotal">$0</span>
         </div>
         <div class="metric">
@@ -53,12 +60,28 @@
           <span class="value" id="entryCount">0</span>
         </div>
       </div>
+
+      <div class="callouts">
+        <div class="callout">
+          <strong>Instant rebate at checkout</strong>
+          <div class="muted small">
+            Example: $500 instant discount, Rebate charges a fee (e.g., $25) so customers don’t do mail-in rebates.
+          </div>
+        </div>
+        <div class="callout">
+          <strong>Manufacturer bundles</strong>
+          <div class="muted small">
+            If a manufacturer provides a discount on an oven, we can offer a list of discounted items in the same category.
+            Bigger bundle → bigger value. We charge a bundle fee (e.g., $50).
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
       <div class="card-head">
         <h3>Prizes & Progress</h3>
-        <p class="muted">The more you save, the more prizes you unlock.</p>
+        <p class="muted">Save more → unlock more prizes. Redeem on the Redeem page.</p>
       </div>
 
       <div class="progress-top">
@@ -79,8 +102,8 @@
       <div class="tiers" id="tiersList"></div>
 
       <div class="note">
-        <strong>Instant rebate model (example):</strong> You apply a rebate (e.g., $500 off) and charge a
-        small processing fee (e.g., $25) for instant delivery. This demo shows totals and fees.
+        <strong>How prizes are paid for:</strong> Processing fees (ex: $25 per instant rebate)
+        and bundle fees (ex: $50 per bundle) fund prize pools and operations.
       </div>
     </div>
   </section>
@@ -89,7 +112,7 @@
     <div class="card-head row">
       <div>
         <h3>Add a Savings Entry</h3>
-        <p class="muted">Example: Costco • Fridge • Savings 500 • Fee 25</p>
+        <p class="muted">Example: Costco • Fridge • Savings 500 • Instant fee 25</p>
       </div>
       <button class="btn ghost" id="clearAllBtn" type="button">Clear All</button>
     </div>
@@ -125,7 +148,7 @@
         </label>
 
         <label class="field">
-          <span class="muted small">Rebate Fee (USD)</span>
+          <span class="muted small">Instant Rebate Fee (USD)</span>
           <input id="fee" type="number" placeholder="25" min="0" step="0.01" />
         </label>
 
@@ -173,8 +196,7 @@
 
   <footer class="footer">
     <div class="muted small">
-      Rebate is a concept demo. Real-world instant rebates would require store offer integrations, receipt verification,
-      and payment/fee processing.
+      Rebate is a concept demo website. Real deployments require offer/receipt verification and merchant/manufacturer agreements.
     </div>
   </footer>
 
