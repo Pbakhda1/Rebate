@@ -1,8 +1,15 @@
-// Rebate — Savings + Rewards + Redemption + Bundles (LocalStorage demo)
+// Rebate — Savings + Rewards + Redemption + Bundles + Receipt Photos (LocalStorage demo)
 
-const ENTRIES_KEY = "rebate_entries_v4";
+const ENTRIES_KEY = "rebate_entries_v5";
 const REDEEM_KEY  = "rebate_redemptions_v1";
 const BUNDLE_KEY  = "rebate_bundles_v1";
+
+/**
+ * NOTE ABOUT STORAGE:
+ * Receipt photos are stored in localStorage as compressed JPEG data URLs.
+ * If you add tons of receipts, you might hit browser storage limits.
+ * (This is normal for a no-backend demo.)
+ */
 
 // Prize tiers (net savings based)
 const TIERS = [
@@ -12,7 +19,6 @@ const TIERS = [
   { name: "Elite Saver", target: 5000, prize: "Premium Prize Pack" }
 ];
 
-// A more “prize-like” list (each tied to a tier)
 const PRIZES = [
   { id: "starter_bonus", tierTarget: 500,  name: "Starter Bonus", detail: "Digital bonus entry / perk" },
   { id: "saver_gift",    tierTarget: 1500, name: "Saver Prize", detail: "Gift card entry (demo)" },
@@ -20,32 +26,26 @@ const PRIZES = [
   { id: "elite_pack",    tierTarget: 5000, name: "Elite Prize Pack", detail: "Premium prize pack (demo)" }
 ];
 
-// Demo manufacturer catalog (you can edit/add)
+// Demo manufacturer catalog
 const CATALOG = {
-  "Whirlpool": {
-    "Appliances": [
-      { sku: "WH-OVEN-01", name: "Whirlpool Oven", price: 1500 },
-      { sku: "WH-FRIDGE-02", name: "Whirlpool Fridge", price: 2100 },
-      { sku: "WH-DW-03", name: "Whirlpool Dishwasher", price: 900 },
-      { sku: "WH-MW-04", name: "Whirlpool Microwave", price: 450 }
-    ]
-  },
-  "Samsung": {
-    "Appliances": [
-      { sku: "SA-OVEN-01", name: "Samsung Oven", price: 1600 },
-      { sku: "SA-FRIDGE-02", name: "Samsung Fridge", price: 2300 },
-      { sku: "SA-WASH-03", name: "Samsung Washer", price: 1100 },
-      { sku: "SA-DRY-04", name: "Samsung Dryer", price: 950 }
-    ]
-  },
-  "LG": {
-    "Appliances": [
-      { sku: "LG-OVEN-01", name: "LG Oven", price: 1550 },
-      { sku: "LG-FRIDGE-02", name: "LG Fridge", price: 2200 },
-      { sku: "LG-RANGE-03", name: "LG Range", price: 1400 },
-      { sku: "LG-DW-04", name: "LG Dishwasher", price: 880 }
-    ]
-  }
+  "Whirlpool": { "Appliances": [
+    { sku: "WH-OVEN-01", name: "Whirlpool Oven", price: 1500 },
+    { sku: "WH-FRIDGE-02", name: "Whirlpool Fridge", price: 2100 },
+    { sku: "WH-DW-03", name: "Whirlpool Dishwasher", price: 900 },
+    { sku: "WH-MW-04", name: "Whirlpool Microwave", price: 450 }
+  ]},
+  "Samsung": { "Appliances": [
+    { sku: "SA-OVEN-01", name: "Samsung Oven", price: 1600 },
+    { sku: "SA-FRIDGE-02", name: "Samsung Fridge", price: 2300 },
+    { sku: "SA-WASH-03", name: "Samsung Washer", price: 1100 },
+    { sku: "SA-DRY-04", name: "Samsung Dryer", price: 950 }
+  ]},
+  "LG": { "Appliances": [
+    { sku: "LG-OVEN-01", name: "LG Oven", price: 1550 },
+    { sku: "LG-FRIDGE-02", name: "LG Fridge", price: 2200 },
+    { sku: "LG-RANGE-03", name: "LG Range", price: 1400 },
+    { sku: "LG-DW-04", name: "LG Dishwasher", price: 880 }
+  ]}
 };
 
 function money(n){
@@ -110,16 +110,61 @@ function tierProgress(netSavings){
   return { currentName, nextTarget: next.target, pct };
 }
 
-// ---------- DASHBOARD (index.html) ----------
+/* ---------- NEW: Receipt compression helpers ---------- */
+async function fileToCompressedDataURL(file, { maxDim = 1280, quality = 0.72 } = {}) {
+  // Only images
+  if (!file || !file.type || !file.type.startsWith("image/")) return null;
+
+  const img = await loadImageFromFile(file);
+
+  // Compute scaled size
+  let { width, height } = img;
+  const scale = Math.min(1, maxDim / Math.max(width, height));
+  width = Math.round(width * scale);
+  height = Math.round(height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, width, height);
+
+  // Use jpeg to compress (smaller)
+  const dataUrl = canvas.toDataURL("image/jpeg", quality);
+  return dataUrl;
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Image load failed"));
+    };
+    img.src = url;
+  });
+}
+
+/* ---------- DASHBOARD (index.html) ---------- */
 function initDashboard(){
   const form = document.getElementById("entryForm");
-  if(!form) return; // not on this page
+  if(!form) return;
 
   const storeEl = document.getElementById("store");
   const itemEl = document.getElementById("item");
   const savingsEl = document.getElementById("savings");
   const feeEl = document.getElementById("fee");
   const dateEl = document.getElementById("date");
+
+  const receiptEl = document.getElementById("receipt");
+  const receiptPreviewEl = document.getElementById("receiptPreview");
+  const clearReceiptBtn = document.getElementById("clearReceiptBtn");
 
   const grossTotalEl = document.getElementById("grossTotal");
   const feeTotalEl = document.getElementById("feeTotal");
@@ -136,6 +181,85 @@ function initDashboard(){
   const tierProgressTextEl = document.getElementById("tierProgressText");
   const progressFillEl = document.getElementById("progressFill");
   const tiersListEl = document.getElementById("tiersList");
+
+  // modal
+  const modal = document.getElementById("receiptModal");
+  const modalImg = document.getElementById("modalImg");
+  const closeModalBtn = document.getElementById("closeModalBtn");
+
+  let currentReceiptDataUrl = null;
+
+  function openModal(dataUrl){
+    if(!modal || !modalImg) return;
+    modalImg.src = dataUrl;
+    modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
+  }
+  function closeModal(){
+    if(!modal) return;
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+    if (modalImg) modalImg.src = "";
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      const target = e.target;
+      if (target && target.getAttribute && target.getAttribute("data-close") === "1") closeModal();
+    });
+  }
+  if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+
+  function setReceiptPreview(dataUrl){
+    currentReceiptDataUrl = dataUrl;
+    if (!receiptPreviewEl) return;
+
+    if (dataUrl) {
+      receiptPreviewEl.src = dataUrl;
+      receiptPreviewEl.style.display = "block";
+    } else {
+      receiptPreviewEl.src = "";
+      receiptPreviewEl.style.display = "none";
+    }
+  }
+
+  if (receiptEl) {
+    receiptEl.addEventListener("change", async () => {
+      const file = receiptEl.files && receiptEl.files[0];
+      if(!file) {
+        setReceiptPreview(null);
+        return;
+      }
+
+      // Basic size guard before processing (still compresses after)
+      const maxRawMB = 12;
+      if (file.size > maxRawMB * 1024 * 1024) {
+        alert(`That photo is too large (${Math.round(file.size/1024/1024)}MB). Try a smaller image.`);
+        receiptEl.value = "";
+        setReceiptPreview(null);
+        return;
+      }
+
+      try{
+        const dataUrl = await fileToCompressedDataURL(file, { maxDim: 1400, quality: 0.72 });
+        setReceiptPreview(dataUrl);
+      }catch{
+        alert("Could not read that receipt image. Try again.");
+        receiptEl.value = "";
+        setReceiptPreview(null);
+      }
+    });
+  }
+
+  if (clearReceiptBtn) {
+    clearReceiptBtn.addEventListener("click", () => {
+      if (receiptEl) receiptEl.value = "";
+      setReceiptPreview(null);
+    });
+  }
 
   function matchesSearch(e, q){
     if(!q) return true;
@@ -179,6 +303,8 @@ function initDashboard(){
 
     for(const e of filtered){
       const netRow = Number(e.savings || 0) - Number(e.fee || 0);
+      const hasReceipt = !!e.receiptDataUrl;
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${escapeHtml(e.date || "—")}</td>
@@ -187,11 +313,15 @@ function initDashboard(){
         <td class="right">${money(e.savings)}</td>
         <td class="right">${money(e.fee)}</td>
         <td class="right">${money(netRow)}</td>
+        <td>
+          ${hasReceipt ? `<button class="btn" data-view="${escapeHtml(e.id)}">View</button>` : `<span class="muted small">—</span>`}
+        </td>
         <td class="right"><button class="btn" data-del="${escapeHtml(e.id)}">Delete</button></td>
       `;
       tbody.appendChild(tr);
     }
 
+    // delete buttons
     tbody.querySelectorAll("button[data-del]").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-del");
@@ -200,12 +330,23 @@ function initDashboard(){
         render();
       });
     });
+
+    // view receipt buttons
+    tbody.querySelectorAll("button[data-view]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-view");
+        const entry = load(ENTRIES_KEY).find(x => x.id === id);
+        if (entry && entry.receiptDataUrl) openModal(entry.receiptDataUrl);
+      });
+    });
   }
 
   // init
   dateEl.value = todayISO();
+  setReceiptPreview(null);
   render();
 
+  // add entry
   form.addEventListener("submit", (ev) => {
     ev.preventDefault();
 
@@ -218,7 +359,6 @@ function initDashboard(){
     if(!store || !item) return;
     if(!Number.isFinite(savings) || savings < 0) return;
     if(!Number.isFinite(fee) || fee < 0) return;
-
     if(fee > savings){
       alert("Fee cannot be greater than savings for this entry.");
       return;
@@ -230,17 +370,29 @@ function initDashboard(){
       item,
       savings,
       fee,
-      date
+      date,
+      receiptDataUrl: currentReceiptDataUrl || null
     };
 
     const updated = [entry, ...load(ENTRIES_KEY)];
-    save(ENTRIES_KEY, updated);
 
+    // localStorage can fail if too big
+    try{
+      save(ENTRIES_KEY, updated);
+    }catch(err){
+      alert("Storage is full (too many receipt photos). Try removing some receipts or using smaller photos.");
+      return;
+    }
+
+    // reset
     storeEl.value = "";
     itemEl.value = "";
     savingsEl.value = "";
     feeEl.value = "";
     dateEl.value = todayISO();
+
+    if (receiptEl) receiptEl.value = "";
+    setReceiptPreview(null);
 
     render();
   });
@@ -255,10 +407,10 @@ function initDashboard(){
   });
 }
 
-// ---------- REDEEM PAGE (redeem.html) ----------
+/* ---------- REDEEM PAGE (redeem.html) ---------- */
 function initRedeem(){
   const prizeList = document.getElementById("prizeList");
-  if(!prizeList) return; // not on this page
+  if(!prizeList) return;
 
   const redeemNet = document.getElementById("redeemNet");
   const unlockedCount = document.getElementById("unlockedCount");
@@ -283,7 +435,6 @@ function initRedeem(){
     redeemedCount.textContent = String(redemptions.length);
     availableCount.textContent = String(available.length);
 
-    // prize cards
     prizeList.innerHTML = "";
     for(const p of PRIZES){
       const isUnlocked = net >= p.tierTarget;
@@ -291,7 +442,6 @@ function initRedeem(){
 
       const div = document.createElement("div");
       div.className = "prize";
-
       div.innerHTML = `
         <div>
           <div class="title">${escapeHtml(p.name)}</div>
@@ -333,13 +483,8 @@ function initRedeem(){
       prizeList.appendChild(div);
     }
 
-    // history table
     tbody.innerHTML = "";
-    if(redemptions.length === 0){
-      empty.style.display = "block";
-    }else{
-      empty.style.display = "none";
-    }
+    empty.style.display = redemptions.length === 0 ? "block" : "none";
 
     for(const r of redemptions){
       const d = new Date(r.date);
@@ -364,10 +509,10 @@ function initRedeem(){
   render();
 }
 
-// ---------- BUNDLES PAGE (bundles.html) ----------
+/* ---------- BUNDLES PAGE (bundles.html) ---------- */
 function initBundles(){
   const mfgSelect = document.getElementById("mfgSelect");
-  if(!mfgSelect) return; // not on this page
+  if(!mfgSelect) return;
 
   const catSelect = document.getElementById("catSelect");
   const bundleFeeInput = document.getElementById("bundleFee");
@@ -386,15 +531,9 @@ function initBundles(){
   const empty = document.getElementById("bundleEmpty");
   const clearBtn = document.getElementById("clearBundlesBtn");
 
-  function manufacturers(){
-    return Object.keys(CATALOG);
-  }
-  function categories(mfg){
-    return Object.keys(CATALOG[mfg] || {});
-  }
-  function items(mfg, cat){
-    return (CATALOG[mfg] && CATALOG[mfg][cat]) ? CATALOG[mfg][cat] : [];
-  }
+  function manufacturers(){ return Object.keys(CATALOG); }
+  function categories(mfg){ return Object.keys(CATALOG[mfg] || {}); }
+  function items(mfg, cat){ return (CATALOG[mfg] && CATALOG[mfg][cat]) ? CATALOG[mfg][cat] : []; }
 
   function fillManufacturers(){
     mfgSelect.innerHTML = "";
@@ -415,10 +554,30 @@ function initBundles(){
       catSelect.appendChild(opt);
     }
   }
-
   function selectedSkus(){
-    return Array.from(itemsWrap.querySelectorAll("input[type=checkbox]:checked"))
-      .map(cb => cb.value);
+    return Array.from(itemsWrap.querySelectorAll("input[type=checkbox]:checked")).map(cb => cb.value);
+  }
+
+  function renderSummary(){
+    const m = mfgSelect.value;
+    const c = catSelect.value;
+    const list = items(m, c);
+
+    const skus = selectedSkus();
+    let subtotal = 0;
+    for(const it of list){
+      if(skus.includes(it.sku)) subtotal += Number(it.price || 0);
+    }
+
+    const discount = Number(mfgDiscountInput.value || 0);
+    const fee = Number(bundleFeeInput.value || 0);
+    const total = Math.max(0, subtotal - discount) + fee;
+
+    outCount.textContent = String(skus.length);
+    outSubtotal.textContent = money(subtotal);
+    outDiscount.textContent = money(discount);
+    outFee.textContent = money(fee);
+    outTotal.textContent = money(total);
   }
 
   function renderItems(){
@@ -440,35 +599,10 @@ function initBundles(){
         </label>
         <div class="right"><strong>${money(it.price)}</strong></div>
       `;
-      const cb = div.querySelector("input");
-      cb.addEventListener("change", renderSummary);
+      div.querySelector("input").addEventListener("change", renderSummary);
       itemsWrap.appendChild(div);
     }
-
     renderSummary();
-  }
-
-  function renderSummary(){
-    const m = mfgSelect.value;
-    const c = catSelect.value;
-    const list = items(m, c);
-
-    const skus = selectedSkus();
-    let subtotal = 0;
-    for(const it of list){
-      if(skus.includes(it.sku)) subtotal += Number(it.price || 0);
-    }
-
-    const discount = Number(mfgDiscountInput.value || 0);
-    const fee = Number(bundleFeeInput.value || 0);
-
-    const total = Math.max(0, subtotal - discount) + fee;
-
-    outCount.textContent = String(skus.length);
-    outSubtotal.textContent = money(subtotal);
-    outDiscount.textContent = money(discount);
-    outFee.textContent = money(fee);
-    outTotal.textContent = money(total);
   }
 
   function renderSavedBundles(){
@@ -493,11 +627,7 @@ function initBundles(){
     }
   }
 
-  // events
-  mfgSelect.addEventListener("change", () => {
-    fillCategories();
-    renderItems();
-  });
+  mfgSelect.addEventListener("change", () => { fillCategories(); renderItems(); });
   catSelect.addEventListener("change", renderItems);
   bundleFeeInput.addEventListener("input", renderSummary);
   mfgDiscountInput.addEventListener("input", renderSummary);
@@ -541,7 +671,6 @@ function initBundles(){
     const updated = [record, ...load(BUNDLE_KEY)];
     save(BUNDLE_KEY, updated);
 
-    // optional: also count bundle fee toward funding — but not changing savings totals in dashboard
     alert("Bundle saved (demo).");
     renderSavedBundles();
   });

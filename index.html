@@ -112,7 +112,7 @@
     <div class="card-head row">
       <div>
         <h3>Add a Savings Entry</h3>
-        <p class="muted">Example: Costco • Fridge • Savings 500 • Instant fee 25</p>
+        <p class="muted">Example: Costco • Fridge • Savings 500 • Instant fee 25 • (optional) receipt photo</p>
       </div>
       <button class="btn ghost" id="clearAllBtn" type="button">Clear All</button>
     </div>
@@ -156,6 +156,18 @@
           <span class="muted small">Date</span>
           <input id="date" type="date" />
         </label>
+
+        <!-- NEW: Receipt capture -->
+        <label class="field field-span">
+          <span class="muted small">Receipt Photo (optional)</span>
+          <!-- capture="environment" encourages back camera on mobile -->
+          <input id="receipt" type="file" accept="image/*" capture="environment" />
+          <div class="receipt-row">
+            <img id="receiptPreview" class="receipt-preview" alt="Receipt preview" />
+            <button class="btn" id="clearReceiptBtn" type="button">Remove Photo</button>
+            <span class="muted small" id="receiptHint">Tip: On a phone, this can open the camera.</span>
+          </div>
+        </label>
       </div>
 
       <div class="form-actions">
@@ -181,6 +193,7 @@
             <th class="right">Savings</th>
             <th class="right">Fee</th>
             <th class="right">Net</th>
+            <th>Receipt</th>
             <th class="right">Action</th>
           </tr>
         </thead>
@@ -201,6 +214,20 @@
   </footer>
 
 </main>
+
+<!-- NEW: Receipt modal -->
+<div class="modal" id="receiptModal" aria-hidden="true">
+  <div class="modal-backdrop" data-close="1"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-label="Receipt viewer">
+    <div class="modal-head">
+      <strong>Receipt Photo</strong>
+      <button class="btn ghost" id="closeModalBtn" type="button">Close</button>
+    </div>
+    <div class="modal-body">
+      <img id="modalImg" class="modal-img" alt="Receipt full view" />
+    </div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>
